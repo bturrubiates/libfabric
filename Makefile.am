@@ -35,6 +35,7 @@ src_libfabric_la_SOURCES = \
 	include/prov.h \
 	src/fabric.c \
 	src/fi_tostr.c \
+	src/clock_gettime_w.c \
 	$(common_srcs)
 
 if HAVE_SOCKETS

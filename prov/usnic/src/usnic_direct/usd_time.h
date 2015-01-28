@@ -44,7 +44,7 @@
 #ifndef _USD_TIME_H_
 #define _USD_TIME_H_
 
-#include <time.h>
+#include "clock_gettime_w.h"
 
 typedef uint64_t usd_time_t;
 

@@ -36,7 +36,7 @@
 #ifndef _USDF_TIMER_H_
 #define _USDF_TIMER_H_
 
-#include <time.h>
+#include "clock_gettime_w.h"
 
 struct usdf_timer_entry;
 

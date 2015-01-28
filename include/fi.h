@@ -38,8 +38,20 @@
 #endif /* HAVE_CONFIG_H */
 
 #include <string.h>
+
+#ifdef __APPLE__
+#include <libkern/OSByteOrder.h>
+#include <machine/endian.h>
+#define le32toh OSSwapLittleToHostInt32
+#define htole32 OSSwapHostToLittleInt32
+#define bswap_16 OSSwapInt16
+#define bswap_32 OSSwapInt32
+#define bswap_64 OSSwapInt64
+#else
 #include <byteswap.h>
 #include <endian.h>
+#endif
+
 #include <pthread.h>
 #include <string.h>
 #include <rdma/fabric.h>
@@ -66,11 +78,19 @@ extern "C" {
 #endif
 
 #if __BYTE_ORDER == __LITTLE_ENDIAN
+#ifndef htonll
 static inline uint64_t htonll(uint64_t x) { return bswap_64(x); }
+#endif
+#ifndef ntohll
 static inline uint64_t ntohll(uint64_t x) { return bswap_64(x); }
+#endif
 #else
+#ifndef htonll
 static inline uint64_t htonll(uint64_t x) { return x; }
+#endif
+#ifndef ntohll
 static inline uint64_t ntohll(uint64_t x) { return x; }
+#endif
 #endif
 
 #define sizeof_field(type, field) sizeof(((type *)0)->field)
@@ -78,10 +98,13 @@ static inline uint64_t ntohll(uint64_t x) { return x; }
 #define MIN(a, b) ((a) < (b) ? a : b)
 #define MAX(a, b) ((a) > (b) ? a : b)
 
+#ifndef flsll
 static inline int flsll(long long int i)
 {
 	return i ? 65 - ffsll(htonll(i)) : 0;
 }
+#endif
+
 static inline uint64_t roundup_power_of_two(uint64_t n)
 {
 	return 1ULL << flsll(n - 1);

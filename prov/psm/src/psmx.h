@@ -37,6 +37,7 @@ extern "C" {
 #include "fi.h"
 #include "fi_enosys.h"
 #include "fi_list.h"
+#include "clock_gettime_w.h"
 
 #define PSM_PFX "libfabric:psm"
 

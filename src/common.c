@@ -56,7 +56,7 @@ int fi_wait_cond(pthread_cond_t *cond, pthread_mutex_t *mut, int timeout)
 	if (timeout < 0)
 		return pthread_cond_wait(cond, mut);
 
-	clock_gettime(CLOCK_REALTIME, &ts);
+	clock_gettime_w(CLOCK_REALTIME, &ts);
 	ts.tv_sec += timeout / 1000;
 	ts.tv_nsec += (timeout % 1000) * 1000000;
 	return pthread_cond_timedwait(cond, mut, &ts);

@@ -261,7 +261,7 @@ static int psmx_cntr_wait(struct fid_cntr *cntr, uint64_t threshold, int timeout
 
 	cntr_priv = container_of(cntr, struct psmx_fid_cntr, cntr);
 
-	clock_gettime(CLOCK_REALTIME, &ts0);
+	clock_gettime_w(CLOCK_REALTIME, &ts0);
 
 	while (cntr_priv->counter < threshold) {
 		if (cntr_priv->wait) {
@@ -280,7 +280,7 @@ static int psmx_cntr_wait(struct fid_cntr *cntr, uint64_t threshold, int timeout
 		if (timeout < 0)
 			continue;
 
-		clock_gettime(CLOCK_REALTIME, &ts);
+		clock_gettime_w(CLOCK_REALTIME, &ts);
 		msec_passed = (ts.tv_sec - ts0.tv_sec) * 1000 +
 			      (ts.tv_nsec - ts0.tv_nsec) / 1000000;
 

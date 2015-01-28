@@ -601,7 +601,7 @@ static ssize_t psmx_cq_sreadfrom(struct fid_cq *cq, void *buf, size_t count,
 			psmx_wait_wait((struct fid_wait *)cq_priv->wait, timeout);
 		}
 		else {
-			clock_gettime(CLOCK_REALTIME, &ts0);
+			clock_gettime_w(CLOCK_REALTIME, &ts0);
 			while (1) {
 				if (psmx_cq_poll_mq(cq_priv, cq_priv->domain, NULL, 0, NULL))
 					break;
@@ -613,7 +613,7 @@ static ssize_t psmx_cq_sreadfrom(struct fid_cq *cq, void *buf, size_t count,
 				if (timeout < 0)
 					continue;
 
-				clock_gettime(CLOCK_REALTIME, &ts);
+				clock_gettime_w(CLOCK_REALTIME, &ts);
 				msec_passed = (ts.tv_sec - ts0.tv_sec) * 1000 +
 					       (ts.tv_nsec - ts0.tv_nsec) / 1000000;
 
