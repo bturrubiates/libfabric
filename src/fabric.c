@@ -244,7 +244,7 @@ static struct fi_prov *fi_getprov(const char *prov_name)
 }
 
 __attribute__((visibility ("default")))
-void fi_freeinfo_(struct fi_info *info)
+void default_symver_pre(fi_freeinfo)(struct fi_info *info)
 {
 	struct fi_info *next;
 
@@ -271,7 +271,7 @@ void fi_freeinfo_(struct fi_info *info)
 default_symver(fi_freeinfo_, fi_freeinfo);
 
 __attribute__((visibility ("default")))
-int fi_getinfo_(uint32_t version, const char *node, const char *service,
+int default_symver_pre(fi_getinfo)(uint32_t version, const char *node, const char *service,
 	       uint64_t flags, struct fi_info *hints, struct fi_info **info)
 {
 	struct fi_prov *prov;
@@ -322,7 +322,7 @@ int fi_getinfo_(uint32_t version, const char *node, const char *service,
 default_symver(fi_getinfo_, fi_getinfo);
 
 __attribute__((visibility ("default")))
-struct fi_info *fi_dupinfo_(const struct fi_info *info)
+struct fi_info *default_symver_pre(fi_dupinfo)(const struct fi_info *info)
 {
 	struct fi_info *dup;
 
@@ -419,7 +419,7 @@ fail:
 default_symver(fi_dupinfo_, fi_dupinfo);
 
 __attribute__((visibility ("default")))
-int fi_fabric_(struct fi_fabric_attr *attr, struct fid_fabric **fabric, void *context)
+int default_symver_pre(fi_fabric)(struct fi_fabric_attr *attr, struct fid_fabric **fabric, void *context)
 {
 	struct fi_prov *prov;
 
@@ -438,7 +438,7 @@ int fi_fabric_(struct fi_fabric_attr *attr, struct fid_fabric **fabric, void *co
 default_symver(fi_fabric_, fi_fabric);
 
 __attribute__((visibility ("default")))
-uint32_t fi_version_(void)
+uint32_t default_symver_pre(fi_version)(void)
 {
 	return FI_VERSION(FI_MAJOR_VERSION, FI_MINOR_VERSION);
 }
@@ -460,7 +460,7 @@ static const char *const errstr[] = {
 };
 
 __attribute__((visibility ("default")))
-const char *fi_strerror_(int errnum)
+const char *default_symver_pre(fi_strerror)(int errnum)
 {
 	if (errnum < FI_ERRNO_OFFSET)
 		return strerror(errnum);

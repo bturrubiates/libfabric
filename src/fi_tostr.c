@@ -493,7 +493,7 @@ static void fi_tostr_version(char *buf)
 }
 
 __attribute__((visibility ("default")))
-char *fi_tostr_(const void *data, enum fi_type datatype)
+char *default_symver_pre(fi_tostr)(const void *data, enum fi_type datatype)
 {
 	static char *buf = NULL;
 	uint64_t val64 = *(const uint64_t *) data;
