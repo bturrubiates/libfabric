@@ -48,6 +48,7 @@
 
 #include <rdma/fi_errno.h>
 #include "fi.h"
+#include "clock_gettime_w.h"
 
 int fi_wait_cond(pthread_cond_t *cond, pthread_mutex_t *mut, int timeout)
 {

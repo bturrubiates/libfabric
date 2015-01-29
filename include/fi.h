@@ -98,16 +98,14 @@ static inline uint64_t ntohll(uint64_t x) { return x; }
 #define MIN(a, b) ((a) < (b) ? a : b)
 #define MAX(a, b) ((a) > (b) ? a : b)
 
-#ifndef flsll
-static inline int flsll(long long int i)
+static inline int frsll(long long int i)
 {
 	return i ? 65 - ffsll(htonll(i)) : 0;
 }
-#endif
 
 static inline uint64_t roundup_power_of_two(uint64_t n)
 {
-	return 1ULL << flsll(n - 1);
+	return 1ULL << frsll(n - 1);
 }
 
 #define FI_TAG_GENERIC	0xAAAAAAAAAAAAAAAAULL
@@ -227,8 +225,7 @@ uint64_t fi_tag_format(uint64_t tag_bits);
         asm(".symver " #name "," #api "@@" DEFAULT_ABI)
 #else
 #  define symver(name, api, ver)
-#  define default_symver(name, api) \
-        extern __typeof(name) api __attribute__((alias(#name)))
+#  define default_symver(name, api)
 
 #endif /* HAVE_SYMVER_SUPPORT */
 

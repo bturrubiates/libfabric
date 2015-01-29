@@ -493,7 +493,11 @@ static void fi_tostr_version(char *buf)
 }
 
 __attribute__((visibility ("default")))
+#ifdef __APPLE__
+char *fi_tostr(const void *data, enum fi_type datatype)
+#else
 char *fi_tostr_(const void *data, enum fi_type datatype)
+#endif
 {
 	static char *buf = NULL;
 	uint64_t val64 = *(const uint64_t *) data;

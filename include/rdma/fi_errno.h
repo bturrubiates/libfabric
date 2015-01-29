@@ -166,7 +166,13 @@ extern "C" {
 //#define	FI_ENOMEDIUM		ENOMEDIUM	/* No medium found */
 //#define	FI_EMEDIUMTYPE		EMEDIUMTYPE	/* Wrong medium type */
 #define	FI_ECANCELED		ECANCELED	/* Operation Canceled */
-#define	FI_ENOKEY		ENOKEY		/* Required key not available */
+
+#ifndef ENOKEY
+#define FI_ENOKEY 126
+#else
+#define FI_ENOKEY ENOKEY
+#endif
+
 //#define	FI_EKEYEXPIRED		EKEYEXPIRED	/* Key has expired */
 //#define	FI_EKEYREVOKED		EKEYREVOKED	/* Key has been revoked */
 #define	FI_EKEYREJECTED		EKEYREJECTED	/* Key was rejected by service */

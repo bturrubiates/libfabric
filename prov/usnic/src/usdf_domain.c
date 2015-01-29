@@ -58,6 +58,10 @@
 #include "usdf_rdm.h"
 #include "usdf_timer.h"
 
+#ifdef __APPLE__
+#define pthread_yield() pthread_yield_np()
+#endif
+
 static int
 usdf_domain_bind(struct fid *fid, struct fid *bfid, uint64_t flags)
 {

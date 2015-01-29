@@ -39,8 +39,13 @@
 
 #include "sock.h"
 #include "sock_util.h"
+#include <pthread.h>
 
-extern const char const sock_dom_name[];
+#ifdef __APPLE__
+#define pthread_yield() pthread_yield_np()
+#endif
+
+extern const char sock_dom_name[];
 
 const struct fi_domain_attr sock_domain_attr = {
 	.name = NULL,

@@ -55,6 +55,9 @@
 #include "sock.h"
 #include "sock_util.h"
 
+#ifdef __APPLE__
+#define pthread_yield() pthread_yield_np()
+#endif
 
 #define PE_INDEX(_pe, _e) (_e - &_pe->pe_table[0])
 #define SOCK_GET_RX_ID(_addr, _bits) ((_bits) == 0) ? 0 : \

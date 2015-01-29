@@ -55,6 +55,10 @@
 #include "sock_util.h"
 #include "sock.h"
 
+#ifndef HOST_NAME_MAX
+#define HOST_NAME_MAX 255
+#endif
+
 const struct fi_ep_attr sock_dgram_ep_attr = {
 	.protocol = FI_PROTO_SOCK_TCP,
 	.max_msg_size = SOCK_EP_MAX_MSG_SZ,
