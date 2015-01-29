@@ -221,6 +221,12 @@ int fi_rma_target_allowed(uint64_t caps);
 
 #define DEFAULT_ABI "FABRIC_1.0"
 
+#ifdef  HAVE_ALIAS_ATTRIBUTE
+#define LIBFAB_ADD_SUFFIX(a) a##_
+#else
+#define LIBFAB_ADD_SUFFIX(a) a
+#endif
+
 /* symbol -> external symbol mappings */
 #ifdef HAVE_SYMVER_SUPPORT
 
@@ -230,8 +236,12 @@ int fi_rma_target_allowed(uint64_t caps);
         asm(".symver " #name "," #api "@@" DEFAULT_ABI)
 #else
 #  define symver(name, api, ver)
+#ifdef  HAVE_ALIAS_ATTRIBUTE
 #  define default_symver(name, api) \
-        extern __typeof(name) api __attribute__((alias(#name)))
+        extern typeof (name) api __attribute__((alias(#name)));
+#else
+#  define default_symver(name, api)
+#endif  /* HAVE_ALIAS_ATTRIBUTE */
 
 #endif /* HAVE_SYMVER_SUPPORT */
 

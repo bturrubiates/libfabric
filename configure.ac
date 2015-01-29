@@ -125,6 +125,23 @@ if test x$ac_cv_asm_symver_support = xyes; then
 	AC_DEFINE([HAVE_SYMVER_SUPPORT], 1, [assembler has .symver support])
 fi
 
+AC_CACHE_CHECK(
+  [for alias attribute support],
+  [ac_cv_prog_cc_alias_symbols],
+  [AC_LINK_IFELSE(
+    [AC_LANG_SOURCE[
+        int foo(int arg);
+         int foo(int arg) { return arg + 3; };
+         int foo2(int arg) __attribute__ (( __alias__("foo")));
+      ]],
+    [ac_cv_prog_cc_alias_symbols="yes"],
+    [ac_cv_prog_cc_alias_symbols="no"])])
+
+if test "$ac_cv_prog_cc_alias_symbols" = yes; then
+  AC_DEFINE([HAVE_ALIAS_ATTRIBUTE], [1],
+            [Define to 1 if the linker supports alias attribute.])
+fi
+
 dnl Provider-specific checks
 FI_PROVIDER_INIT
 FI_PROVIDER_SETUP([psm])
