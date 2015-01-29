@@ -216,6 +216,12 @@ uint64_t fi_tag_format(uint64_t tag_bits);
 
 #define DEFAULT_ABI "FABRIC_1.0"
 
+#ifdef  HAVE_ALIAS_ATTRIBUTE
+#define LIBFAB_ADD_SUFFIX(a) a##_
+#else
+#define LIBFAB_ADD_SUFFIX(a) a
+#endif
+
 /* symbol -> external symbol mappings */
 #ifdef HAVE_SYMVER_SUPPORT
 
@@ -225,7 +231,12 @@ uint64_t fi_tag_format(uint64_t tag_bits);
         asm(".symver " #name "," #api "@@" DEFAULT_ABI)
 #else
 #  define symver(name, api, ver)
+#ifdef  HAVE_ALIAS_ATTRIBUTE
+#  define default_symver(name, api) \
+        extern typeof (name) api __attribute__((alias(#name)));
+#else
 #  define default_symver(name, api)
+#endif  /* HAVE_ALIAS_ATTRIBUTE */
 
 #endif /* HAVE_SYMVER_SUPPORT */
 

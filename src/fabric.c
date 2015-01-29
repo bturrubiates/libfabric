@@ -209,11 +209,7 @@ static struct fi_prov *fi_getprov(const char *prov_name)
 }
 
 __attribute__((visibility ("default")))
-#ifdef __APPLE__
-void fi_freeinfo(struct fi_info *info)
-#else
-void fi_freeinfo_(struct fi_info *info)
-#endif
+void LIBFAB_ADD_SUFFIX(fi_freeinfo)(struct fi_info *info)
 {
 	struct fi_info *next;
 
@@ -240,13 +236,8 @@ void fi_freeinfo_(struct fi_info *info)
 default_symver(fi_freeinfo_, fi_freeinfo);
 
 __attribute__((visibility ("default")))
-#ifdef __APPLE__
-int fi_getinfo(uint32_t version, const char *node, const char *service,
+int LIBFAB_ADD_SUFFIX(fi_getinfo)(uint32_t version, const char *node, const char *service,
 	       uint64_t flags, struct fi_info *hints, struct fi_info **info)
-#else
-int fi_getinfo_(uint32_t version, const char *node, const char *service,
-	       uint64_t flags, struct fi_info *hints, struct fi_info **info)
-#endif
 {
 	struct fi_prov *prov;
 	struct fi_info *tail, *cur;
@@ -294,11 +285,7 @@ int fi_getinfo_(uint32_t version, const char *node, const char *service,
 default_symver(fi_getinfo_, fi_getinfo);
 
 __attribute__((visibility ("default")))
-#ifdef __APPLE__
-struct fi_info *fi_dupinfo(const struct fi_info *info)
-#else
-struct fi_info *fi_dupinfo_(const struct fi_info *info)
-#endif
+struct fi_info *LIBFAB_ADD_SUFFIX(fi_dupinfo)(const struct fi_info *info)
 {
 	struct fi_info *dup;
 
@@ -395,11 +382,7 @@ fail:
 default_symver(fi_dupinfo_, fi_dupinfo);
 
 __attribute__((visibility ("default")))
-#ifdef __APPLE__
-int fi_fabric(struct fi_fabric_attr *attr, struct fid_fabric **fabric, void *context)
-#else
-int fi_fabric_(struct fi_fabric_attr *attr, struct fid_fabric **fabric, void *context)
-#endif
+int LIBFAB_ADD_SUFFIX(fi_fabric)(struct fi_fabric_attr *attr, struct fid_fabric **fabric, void *context)
 {
 	struct fi_prov *prov;
 
@@ -418,11 +401,7 @@ int fi_fabric_(struct fi_fabric_attr *attr, struct fid_fabric **fabric, void *co
 default_symver(fi_fabric_, fi_fabric);
 
 __attribute__((visibility ("default")))
-#ifdef __APPLE__
-uint32_t fi_version(void)
-#else
-uint32_t fi_version_(void)
-#endif
+uint32_t LIBFAB_ADD_SUFFIX(fi_version)(void)
 {
 	return FI_VERSION(FI_MAJOR_VERSION, FI_MINOR_VERSION);
 }
@@ -443,11 +422,7 @@ static const char *const errstr[] = {
 };
 
 __attribute__((visibility ("default")))
-#ifdef __APPLE__
-const char *fi_strerror(int errnum)
-#else
-const char *fi_strerror_(int errnum)
-#endif
+const char *LIBFAB_ADD_SUFFIX(fi_strerror)(int errnum)
 {
 	if (errnum < FI_ERRNO_OFFSET)
 		return strerror(errnum);
