@@ -40,7 +40,7 @@
 #include "sock.h"
 #include "sock_util.h"
 
-extern const char const sock_dom_name[];
+extern const char sock_dom_name[];
 
 const struct fi_domain_attr sock_domain_attr = {
 	.name = NULL,
