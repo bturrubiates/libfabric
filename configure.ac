@@ -54,10 +54,6 @@ AC_PROG_CC_C99
 dnl Checks for header files.
 AC_HEADER_STDC
 
-dnl Only build on Linux
-AC_CHECK_HEADER([linux/types.h], [],
-	[AC_MSG_ERROR([libfabric only builds on Linux])])
-
 LT_INIT
 
 dnl dlopen support is optional
