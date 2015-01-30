@@ -277,7 +277,7 @@ int fi_getinfo_(uint32_t version, const char *node, const char *service,
 				continue;
 			} else {
 				/* a provider has an error, clean up and bail */
-				fi_freeinfo_(*info);
+				fi_freeinfo(*info);
 				*info = NULL;
 				return ret;
 			}
