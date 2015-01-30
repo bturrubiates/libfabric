@@ -128,6 +128,10 @@
 #define pthread_yield() pthread_yield_np()
 #endif
 
+#ifndef HOST_NAME_MAX
+#define HOST_NAME_MAX 255
+#endif
+
 struct sock_fabric{
 	struct fid_fabric fab_fid;
 	atomic_t ref;
