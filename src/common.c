@@ -49,6 +49,11 @@
 #include <rdma/fi_errno.h>
 #include "fi.h"
 
+#ifdef __APPLE__
+#include "clock_gettime_w.h"
+#define clock_gettime clock_gettime_w
+#endif
+
 int fi_wait_cond(pthread_cond_t *cond, pthread_mutex_t *mut, int timeout)
 {
 	struct timespec ts;

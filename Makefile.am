@@ -41,6 +41,7 @@ src_libfabric_la_SOURCES = \
 	src/fabric.c \
 	src/fi_tostr.c \
 	src/log.c \
+	src/clock_gettime_w.c \
 	$(common_srcs)
 
 if HAVE_SOCKETS
