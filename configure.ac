@@ -70,8 +70,10 @@ AC_CHECK_LIB(dl, dlopen, [],
 dnl Checks for libraries
 AC_CHECK_LIB(pthread, pthread_mutex_init, [],
     AC_MSG_ERROR([pthread_mutex_init() not found.  libfabric requires libpthread.]))
-dnl AC_CHECK_LIB(rt, clock_gettime, [],
-dnl    AC_MSG_ERROR([clock_gettime() not found.  libfabric requires librt.]))
+    AC_SEARCH_LIBS([clock_gettime],[rt posix4],
+                 [AC_DEFINE([HAVE_CLOCK_GETTIME], [1],
+                            [Define to 1 if have clock_gettime.])
+                 ],[],[])
 
 dnl Check for gcc atomic intrinsics
 AC_MSG_CHECKING(compiler support for c11 atomics)
