@@ -43,6 +43,7 @@ src_libfabric_la_SOURCES = \
 	src/fabric.c \
 	src/fi_tostr.c \
 	src/log.c \
+	src/mach_clock_gettime.c \
 	$(common_srcs)
 
 src_libfabric_la_CPPFLAGS = $(AM_CPPFLAGS)

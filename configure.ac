@@ -9,6 +9,8 @@ AC_CONFIG_HEADERS(config.h)
 AM_INIT_AUTOMAKE([1.11 dist-bzip2 foreign -Wall -Werror subdir-objects parallel-tests])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 
+AC_CANONICAL_HOST
+
 AC_ARG_ENABLE([debug],
 	      [AS_HELP_STRING([--enable-debug],
 			      [Enable debugging @<:@default=no@:>@])
@@ -54,10 +56,6 @@ AC_PROG_CC_C99
 dnl Checks for header files.
 AC_HEADER_STDC
 
-dnl Only build on Linux
-AC_CHECK_HEADER([linux/types.h], [],
-	[AC_MSG_ERROR([libfabric only builds on Linux])])
-
 LT_INIT
 
 dnl dlopen support is optional
@@ -74,8 +72,14 @@ AC_CHECK_LIB(dl, dlopen, [],
 dnl Checks for libraries
 AC_CHECK_LIB(pthread, pthread_mutex_init, [],
     AC_MSG_ERROR([pthread_mutex_init() not found.  libfabric requires libpthread.]))
-AC_CHECK_LIB(rt, clock_gettime, [],
-    AC_MSG_ERROR([clock_gettime() not found.  libfabric requires librt.]))
+
+AC_SEARCH_LIBS([clock_gettime],[rt posix4],
+		[AC_DEFINE([HAVE_CLOCK_GETTIME], [1],
+			[Define to 1 if have clock_gettime.])],
+		[AS_IF([test -z $(expr "$host_os" : '.*\(darwin\)')],
+			[AC_MSG_ERROR([clock_gettime not found.])],
+			[])],
+		[])
 
 dnl Check for gcc atomic intrinsics
 AC_MSG_CHECKING(compiler support for c11 atomics)
