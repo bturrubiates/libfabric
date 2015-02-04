@@ -299,7 +299,7 @@ int fi_getinfo_(uint32_t version, const char *node, const char *service,
 				continue;
 			} else {
 				/* a provider has an error, clean up and bail */
-				fi_freeinfo_(*info);
+				fi_freeinfo(*info);
 				*info = NULL;
 				return ret;
 			}
@@ -456,6 +456,7 @@ static const char *const errstr[] = {
 	[FI_ENOEQ - FI_ERRNO_OFFSET] = "Missing or unavailable event queue",
 	[FI_EDOMAIN - FI_ERRNO_OFFSET] = "Invalid resource domain",
 	[FI_ENOCQ - FI_ERRNO_OFFSET] = "Missing or unavailable completion queue",
+	[FI_ENOKEY - FI_ERRNO_OFFSET] = "Required key not available",
 };
 
 __attribute__((visibility ("default")))

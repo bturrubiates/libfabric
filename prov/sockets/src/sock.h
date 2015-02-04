@@ -34,6 +34,8 @@
 #  include <config.h>
 #endif /* HAVE_CONFIG_H */
 
+#include <pthread.h>
+
 #include <rdma/fabric.h>
 #include <rdma/fi_atomic.h>
 #include <rdma/fi_cm.h>
@@ -121,6 +123,18 @@
 #define SOCK_MINOR_VERSION 0
 
 #define SOCK_INJECT_OK(_flgs)  (((_flgs) & FI_INJECT) && ((!(_flgs)) & FI_FENCE))
+
+#ifdef __APPLE__
+#define pthread_yield() pthread_yield_np()
+#endif
+
+#ifndef HOST_NAME_MAX
+#ifdef _POSIX_HOST_NAME_MAX
+#define HOST_NAME_MAX _POSIX_HOST_NAME_MAX
+#else
+#define HOST_NAME_MAX 255
+#endif
+#endif
 
 struct sock_fabric{
 	struct fid_fabric fab_fid;
