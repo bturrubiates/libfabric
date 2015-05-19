@@ -304,6 +304,7 @@ struct usdf_ep {
 			size_t rx_iov_limit;
 
 			void *ep_hdr_buf;
+			void *ep_hdr_buf_iova;
 			struct usd_udp_hdr **ep_hdr_ptr;
 		} dg;
 		struct {
