@@ -1108,8 +1108,12 @@ usdf_cq_make_soft(struct usdf_cq *cq)
 static int
 usdf_cq_process_attr(struct fi_cq_attr *attr, struct usdf_domain *udp)
 {
-	/* no wait object yet */
-	if (attr->wait_obj != FI_WAIT_NONE) {
+	/*
+	 * no wait object yet except wait_set, which is
+	 * only overrided to pass verbs comp channel fd
+	 */
+	if (attr->wait_obj != FI_WAIT_NONE &&
+		attr->wait_obj != FI_WAIT_SET) {
 		return -FI_ENOSYS;
 	}
 
@@ -1137,12 +1141,15 @@ usdf_cq_create_cq(struct usdf_cq *cq)
 	int comp_vec = -1;
 	struct fi_usnic_comp_channel *comp_channel;
 
-
 	memset(&attr, 0, sizeof(attr));
 	attr.num_entries = cq->cq_attr.size,
 	attr.comp_fd = -1;
 
-	if(cq->cq_attr.wait_set) {
+	if (cq->cq_attr.wait_obj == FI_WAIT_SET) {
+		if(cq->cq_attr.wait_set == NULL) {
+			USDF_WARN("wait_set is missing\n");
+			return -FI_EINVAL;
+		}
 		comp_channel = (struct fi_usnic_comp_channel *)
 					cq->cq_attr.wait_set;
 		if (comp_channel->fid.fclass == FI_USNIC_CLASS_COMP_CHANNEL) {
@@ -1152,7 +1159,6 @@ usdf_cq_create_cq(struct usdf_cq *cq)
 			ibv_cq = comp_channel->ibv_cq;
 		}
 	}
-
 	return usd_create_cq(cq->cq_domain->dom_dev, &attr, &cq->c.hard.cq_cq);
 }
 
