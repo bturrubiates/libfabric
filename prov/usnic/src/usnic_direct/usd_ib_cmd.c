@@ -383,7 +383,7 @@ usd_ib_cmd_alloc_shpd(
     ucp->cmd_version = USNIC_IB_ALLOC_SHPD_CMD_VERSION;
     ucp->v1.iova_start = (u64)iova_start;
     ucp->v1.iova_length = (u64)iova_len;
-    n = write(dev->ud_ib_dev_fd, &cmd, sizeof(cmd));
+    n = write(dev->ud_ctx->ucx_ib_dev_fd, &cmd, sizeof(cmd));
     if (n != sizeof(cmd)) {
         return -errno;
     }
@@ -422,7 +422,7 @@ usd_ib_cmd_share_pd(
     icp->out_words = sizeof(resp) / 4;  /* Assuming no additional data */
     icp->response = (uintptr_t) & resp;
 
-    n = write(dev->ud_ib_dev_fd, &cmd, sizeof(cmd));
+    n = write(dev->ud_ctx->ucx_ib_dev_fd, &cmd, sizeof(cmd));
     if (n != sizeof(cmd)) {
         return -errno;
     }
@@ -519,7 +519,7 @@ int usd_ib_cmd_reg_mr_v1(
     ucp->v1.queue_index = queue_index;
 
     /* Issue command to IB driver */
-    n = write(dev->ud_ib_dev_fd, &cmd, sizeof(cmd));
+    n = write(dev->ud_ctx->ucx_ib_dev_fd, &cmd, sizeof(cmd));
     if (n != sizeof(cmd)) {
         return errno;
     }
