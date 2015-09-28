@@ -82,6 +82,16 @@ static inline struct usd_udp_hdr *_usdf_find_hdr(struct usd_wq *wq)
 	return (struct usd_udp_hdr *) copybuf;
 }
 
+static inline void* _usdf_find_hdr_iova(struct usd_wq *wq)
+{
+	uint8_t *copybuf_iova;
+
+	copybuf_iova = wq->uwq_copybuf_iova
+			+ (wq->uwq_post_index * USD_SEND_MAX_COPY);
+
+	return copybuf_iova;
+}
+
 static inline void _usdf_adjust_hdr(struct usd_udp_hdr *hdr,
 		struct usd_qp_impl *qp, size_t len)
 {
@@ -281,6 +291,7 @@ _usdf_dgram_send_iov_copy(struct usdf_ep *ep, struct usd_dest *dest,
 	struct usd_wq *wq;
  	struct usd_qp_impl *qp;
 	struct usd_udp_hdr *hdr;
+	void *hdr_iova;
 	uint32_t last_post;
 	size_t len;
 	unsigned i;
@@ -300,7 +311,12 @@ _usdf_dgram_send_iov_copy(struct usdf_ep *ep, struct usd_dest *dest,
 
 	_usdf_adjust_hdr(hdr, qp, len);
 
-	last_post = _usd_post_send_one(wq, hdr, len + sizeof(*hdr), cq_entry);
+	/*
+	 * Need to initiate WQ descriptor with copybuf iova
+	 * in share PD usecase
+	 */
+	hdr_iova = _usdf_find_hdr_iova(wq),
+	last_post = _usd_post_send_one(wq, hdr_iova, len + sizeof(*hdr), cq_entry);
 
 	_usdf_adjust_post_info(wq, last_post, context, len);
 
@@ -315,6 +331,7 @@ static ssize_t _usdf_dgram_send_iov(struct usdf_ep *ep, struct usd_dest *dest,
 	struct usd_udp_hdr *hdr;
 	struct usd_qp_impl *qp;
 	struct usd_wq *wq;
+	void *hdr_iova;
 	uint32_t last_post;
 	size_t len;
 
@@ -326,7 +343,12 @@ static ssize_t _usdf_dgram_send_iov(struct usdf_ep *ep, struct usd_dest *dest,
 	memcpy(hdr, &dest->ds_dest.ds_udp.u_hdr, sizeof(*hdr));
 	_usdf_adjust_hdr(hdr, qp, len);
 
-	send_iov[0].iov_base = hdr;
+	/*
+	 * Need to initiate WQ descriptor with copybuf iova
+	 * in share PD usecase
+	 */
+	hdr_iova = _usdf_find_hdr_iova(wq),
+	send_iov[0].iov_base = hdr_iova;
 	send_iov[0].iov_len = sizeof(*hdr);
 	memcpy(&send_iov[1], iov, sizeof(struct iovec) * count);
 
