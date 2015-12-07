@@ -502,54 +502,6 @@ usd_open(
 }
 
 /*
- * Open a raw USNIC device
- */
-int
-usd_open_for_attrs(
-    const char *dev_name,
-    struct usd_device **dev_o)
-{
-    return usd_open_with_fd(dev_name, -1, 0, 0, dev_o);
-}
-
-/*
- * previous generic usd open function, used by libusnic_verbs_d
- */
-int
-usd_open_with_fd(
-    const char *dev_name,
-    int cmd_fd,
-    int check_ready,
-    int alloc_pd,
-    struct usd_device **dev_o)
-{
-    struct usd_device *dev = NULL;
-    int ret;
-
-    ret = usd_dev_alloc_init(NULL, dev_name, cmd_fd, check_ready, &dev);
-    if (ret != 0) {
-        goto out;
-    }
-
-    if (alloc_pd) {
-        ret = usd_ib_cmd_alloc_pd(dev, &dev->ud_pd_handle);
-        if (ret != 0) {
-            goto out;
-        }
-    }
-
-    TAILQ_INSERT_TAIL(&usd_device_list, dev, ud_link);
-    *dev_o = dev;
-    return 0;
-
-out:
-    if (dev != NULL)
-        usd_dev_free(dev);
-    return ret;
->>>>>>> usdfv: merge usd changes to add usd_context related APIs
-}
-
-/*
  * Most generic usd device open function
  */
 int usd_open_with_params(const char *dev_name,
@@ -656,9 +608,13 @@ int usd_open_with_shpd(struct usd_context *context, uint32_t shpd_handle,
                         uint64_t share_key, struct usd_device **dev_o)
 {
     struct usd_device *dev = NULL;
+    struct usd_open_params params;
     int ret;
 
-    ret = usd_dev_alloc_init(context, NULL, -1, 1, &dev);
+    memset(&params, 0, sizeof(params));
+    params.cmd_fd = -1;
+    params.context = context;
+    ret = usd_dev_alloc_init(NULL, &params, &dev);
     if (ret != 0) {
         goto out;
     }
@@ -689,8 +645,6 @@ int usd_alloc_shpd(struct usd_device *dev __attribute__((__unused__)),
 }
 
 int usd_open_with_shpd(struct usd_context *context __attribute__((__unused__)),
-                        const char *dev_name __attribute__((__unused__)),
-                        int cmd_fd __attribute__((__unused__)),
                         uint32_t shpd_handle __attribute__((__unused__)),
                         uint64_t share_key __attribute__((__unused__)),
                         struct usd_device **dev_o __attribute__((__unused__)))

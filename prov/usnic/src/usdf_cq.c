@@ -1137,8 +1137,6 @@ int
 usdf_cq_create_cq(struct usdf_cq *cq)
 {
 	struct usd_cq_init_attr attr;
-	int comp_channel_fd = -1;
-	int comp_vec = -1;
 	struct fi_usnic_comp_channel *comp_channel;
 
 	memset(&attr, 0, sizeof(attr));
@@ -1155,8 +1153,8 @@ usdf_cq_create_cq(struct usdf_cq *cq)
 		if (comp_channel->fid.fclass == FI_USNIC_CLASS_COMP_CHANNEL) {
 			attr.comp_fd = comp_channel->comp_channel_fd;
 			attr.comp_vec = cq->cq_attr.signaling_vector;
-			attr.comp_req_notify = 1; /* xxx */
-			ibv_cq = comp_channel->ibv_cq;
+			attr.comp_req_notify = 1;
+			attr.ibv_cq = comp_channel->ibv_cq;
 		}
 	}
 	return usd_create_cq(cq->cq_domain->dom_dev, &attr, &cq->c.hard.cq_cq);
