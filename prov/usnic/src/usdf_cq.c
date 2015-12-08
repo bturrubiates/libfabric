@@ -994,6 +994,36 @@ static struct fi_ops_cq usdf_cq_data_ops = {
 	.strerror = usdf_cq_strerror,
 };
 
+static int usdf_req_notify_cq(struct fid_cq *fcq)
+{
+	struct usdf_cq *cq;
+        struct fi_ops_cq *hard_ops;
+
+	USDF_TRACE_SYS(CQ, "\n");
+
+	cq = cq_ftou(fcq);
+
+        switch (cq->cq_attr.format) {
+        case FI_CQ_FORMAT_CONTEXT:
+                hard_ops = &usdf_cq_context_ops;
+                break;
+        case FI_CQ_FORMAT_MSG:
+                hard_ops = &usdf_cq_msg_ops;
+                break;
+        case FI_CQ_FORMAT_DATA:
+                hard_ops = &usdf_cq_data_ops;
+                break;
+	default:
+                hard_ops = &usdf_cq_msg_ops;
+                break;
+        }
+
+        if (cq->cq_fid.ops != hard_ops)
+		return -FI_EINVAL;
+
+	return usd_poll_req_notify(cq->c.hard.cq_cq);
+}
+
 static struct fi_ops_cq usdf_cq_data_soft_ops = {
 	.size = sizeof(struct fi_ops_cq),
 	.read = usdf_cq_read_data_soft,
@@ -1005,12 +1035,32 @@ static struct fi_ops_cq usdf_cq_data_soft_ops = {
 	.strerror = usdf_cq_strerror,
 };
 
+static struct fi_usnic_ops_cq usdf_usnic_ops_cq = {
+	.size = sizeof(struct fi_usnic_ops_cq),
+	.req_notify_cq = usdf_req_notify_cq,
+};
+
+static int
+usdf_cq_ops_open(struct fid *fid, const char *ops_name, uint64_t flags,
+		void **ops, void *context)
+{
+	USDF_TRACE("\n");
+
+	if (strcmp(ops_name, FI_USNIC_CQ_OPS_1) == 0) {
+		*ops = &usdf_usnic_ops_cq;
+	} else {
+		return -FI_EINVAL;
+	}
+
+	return 0;
+}
+
 static struct fi_ops usdf_cq_fi_ops = {
 	.size = sizeof(struct fi_ops),
 	.close = usdf_cq_close,
 	.bind = fi_no_bind,
 	.control = usdf_cq_control,
-	.ops_open = fi_no_ops_open,
+	.ops_open = usdf_cq_ops_open,
 };
 
 /*

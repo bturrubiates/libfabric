@@ -135,4 +135,13 @@ struct fi_usnic_ops_domain {
 				struct fi_usnic_shdom *shdom);
 };
 
+/*
+ * usNIC-specific cq ops
+ */
+#define FI_USNIC_CQ_OPS_1 "cq_ops 1"
+struct fi_usnic_ops_cq {
+	size_t size;
+	int (*req_notify_cq)(struct fid_cq *cq);
+};
+
 #endif /* _FI_EXT_USNIC_H_ */
