@@ -614,8 +614,9 @@ usd_ib_cmd_create_cq(
         cmd.usnic_cmd.cur.comp_event_fd = comp_channel;
         if ((affinity_mask = CPU_ALLOC(sysconf(_SC_NPROCESSORS_ONLN)))
                 != NULL &&
-            sched_getaffinity(getpid(), sizeof(affinity_mask),
-                                affinity_mask) == 0) {
+            sched_getaffinity(getpid(),
+                        CPU_ALLOC_SIZE(sysconf(_SC_NPROCESSORS_ONLN)),
+                        affinity_mask) == 0) {
             cmd.usnic_cmd.cur.affinity_mask_ptr = (u64)affinity_mask;
             cmd.usnic_cmd.cur.affinity_mask_len =
                             CPU_ALLOC_SIZE(sysconf(_SC_NPROCESSORS_ONLN));
@@ -733,11 +734,7 @@ usd_ib_cmd_create_qp(
 
     ucp = &cmd.usnic_cmd;
 
-    if (qp->uq_wq.uwq_cq->comp_fd != -1 || qp->uq_rq.urq_cq->comp_fd != -1) {
-        if (dev->ud_ctx->ucx_caps[USD_CAP_GRP_INTR] != 1) {
-            usd_err("usd_create_qp failed, no interrupt support\n");
-            return -ENOTSUP;
-        }
+    if (dev->ud_ctx->ucx_caps[USD_CAP_GRP_INTR]) {
         ucp->cmd_version = USNIC_IB_CREATE_QP_VERSION;
     } else {
             /*
