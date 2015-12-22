@@ -624,6 +624,8 @@ usdf_msg_send_segment(struct usdf_tx *tx, struct usdf_ep *ep)
 	cur_ptr = msg->ms_cur_ptr;
 	cur_resid = msg->ms_iov_resid;
 
+	tx->stats.num_total_sends++;
+
 	/* save first seq for message */
 	if (cur_iov == 0 && cur_resid == msg->ms_iov[0].iov_len) {
 		msg->ms_first_seq = ep->e.msg.ep_next_tx_seq;
@@ -782,16 +784,19 @@ usdf_msg_send_ack(struct usdf_tx *tx, struct usdf_ep *ep)
 	memcpy(hdr, &ep->e.msg.ep_dest->ds_dest.ds_udp.u_hdr,
 			sizeof(struct usd_udp_hdr));
 
+	tx->stats.num_total_sends++;
 	hdr->msg.src_peer_id = htons(ep->e.msg.ep_lcl_peer_id);
 	if (ep->e.msg.ep_send_nak) {
 		hdr->msg.opcode = htons(RUDP_OP_NAK);
 		seq = ep->e.msg.ep_next_rx_seq;
 		hdr->msg.m.nak.nak_seq = htons(seq);
 		ep->e.msg.ep_send_nak = 0;
+		tx->stats.num_nak_sends++;
 	} else {
 		hdr->msg.opcode = htons(RUDP_OP_ACK);
 		seq = ep->e.msg.ep_next_rx_seq - 1;
 		hdr->msg.m.ack.ack_seq = htons(seq);
+		tx->stats.num_ack_sends++;
 	}
 
 	/* add packet lengths */
@@ -818,6 +823,7 @@ usdf_msg_send_completion(struct usd_completion *comp)
 	struct usdf_tx *tx;
 
 	tx = comp->uc_context;
+	tx->stats.num_success_sends++;
 
 	if (!TAILQ_EMPTY(&tx->t.msg.tx_ep_ready) &&
 	    !TAILQ_ON_LIST(tx, tx_link)) {
@@ -1118,16 +1124,38 @@ usdf_msg_handle_recv(struct usdf_domain *udp, struct usd_completion *comp)
 	}
 	rx = ep->ep_rx;
 
-	if (comp->uc_status != USD_COMPSTAT_SUCCESS)
+	rx->stats.num_total_recvs++;
+
+	switch (comp->uc_status) {
+	case USD_COMPSTAT_SUCCESS:
+		rx->stats.num_success_recvs++;
+		break;
+	case USD_COMPSTAT_ERROR_CRC:
+		rx->stats.num_error_crc_recvs++;
 		goto dropit;
+	case USD_COMPSTAT_ERROR_TRUNC:
+		rx->stats.num_error_trunc_recvs++;
+		goto dropit;
+	case USD_COMPSTAT_ERROR_TIMEOUT:
+		rx->stats.num_error_timeout_recvs++;
+		goto dropit;
+	case USD_COMPSTAT_ERROR_INTERNAL:
+		rx->stats.num_error_internal_recvs++;
+		goto dropit;
+	default:
+		rx->stats.num_error_unknown_recvs++;
+		goto dropit;
+	}
 
 	switch (opcode) {
 	case RUDP_OP_ACK:
 		usdf_msg_rx_ack(ep, pkt);
+		rx->stats.num_ack_recvs++;
 		break;
 
 	case RUDP_OP_NAK:
 		usdf_msg_rx_nak(ep, pkt);
+		rx->stats.num_nak_recvs++;
 		break;
 
 	case RUDP_OP_FIRST:
@@ -1139,6 +1167,7 @@ usdf_msg_handle_recv(struct usdf_domain *udp, struct usd_completion *comp)
 		rqe = ep->e.msg.ep_cur_recv;
 		if (rqe == NULL) {
 			if (TAILQ_EMPTY(&rx->r.msg.rx_posted_rqe)) {
+				rx->stats.num_rx_overruns++;
 				goto dropit;
 			}
 			rqe = TAILQ_FIRST(&rx->r.msg.rx_posted_rqe);

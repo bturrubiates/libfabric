@@ -77,6 +77,16 @@ struct fi_usnic_ops_fabric {
 };
 
 /*
+ * usNIC-specified statistic operations
+ */
+#define FI_USNIC_STATS_OPS_1 "stats_ops 1"
+struct fi_usnic_ops_stats {
+	size_t size;
+	void (*reset)(struct fid_ep *ep);
+	void (*print)(struct fid_ep *ep);
+};
+
+/*
  * usNIC-specific AV ops
  */
 #define FI_USNIC_AV_OPS_1 "av_ops 1"

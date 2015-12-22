@@ -773,6 +773,12 @@ static struct fi_usnic_ops_fabric usdf_usnic_ops_fabric = {
 	.getinfo = usdf_usnic_getinfo
 };
 
+static struct fi_usnic_ops_stats usdf_usnic_ops_stats = {
+	.size = sizeof(struct fi_usnic_ops_stats),
+	.reset = usdf_reset_stats,
+	.print = usdf_print_stats
+};
+
 static int
 usdf_fabric_ops_open(struct fid *fid, const char *ops_name, uint64_t flags,
 		void **ops, void *context)
@@ -781,6 +787,8 @@ usdf_fabric_ops_open(struct fid *fid, const char *ops_name, uint64_t flags,
 
 	if (strcmp(ops_name, FI_USNIC_FABRIC_OPS_1) == 0) {
 		*ops = &usdf_usnic_ops_fabric;
+	} else if (strcmp(ops_name, FI_USNIC_STATS_OPS_1) == 0) {
+		*ops = &usdf_usnic_ops_stats;
 	} else {
 		return -FI_EINVAL;
 	}

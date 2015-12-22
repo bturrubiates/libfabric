@@ -833,6 +833,8 @@ usdf_rdm_send_segment(struct usdf_tx *tx, struct usdf_rdm_connection *rdc)
 	qp = to_qpi(tx->tx_qp);
 	wq = &(qp->uq_wq);
 
+	tx->stats.num_total_sends++;
+
 	index = wq->uwq_post_index;
 	hdr = (struct rudp_pkt *)(wq->uwq_copybuf + index * USD_SEND_MAX_COPY);
 
@@ -1006,17 +1008,20 @@ usdf_rdm_send_ack(struct usdf_tx *tx, struct usdf_rdm_connection *rdc)
 
 	memcpy(hdr, &rdc->dc_hdr, sizeof(struct usd_udp_hdr));
 
+	tx->stats.num_total_sends++;
 	if (rdc->dc_send_nak) {
 		hdr->msg.opcode = htons(RUDP_OP_NAK);
 		seq = rdc->dc_ack_seq + 1;
 		hdr->msg.m.nak.nak_seq = htons(seq);
 		rdc->dc_send_nak = 0;
-	USDF_DBG_SYS(EP_DATA, "TX NAK seq=%d\n", seq);
+		USDF_DBG_SYS(EP_DATA, "TX NAK seq=%d\n", seq);
+		tx->stats.num_nak_sends++;
 	} else {
 		hdr->msg.opcode = htons(RUDP_OP_ACK);
 		seq = rdc->dc_ack_seq;
 		hdr->msg.m.ack.ack_seq = htons(seq);
 		USDF_DBG_SYS(EP_DATA, "TXACK seq=%u:%u\n", seq, rdc->dc_rx_msg_id);
+		tx->stats.num_ack_sends++;
 	}
 	hdr->msg.msg_id = htonl(rdc->dc_ack_msg_id);
 
@@ -1044,6 +1049,8 @@ usdf_rdm_send_completion(struct usd_completion *comp)
 	struct usdf_tx *tx;
 
 	tx = comp->uc_context;
+
+	tx->stats.num_success_sends++;
 
 	if (!TAILQ_EMPTY(&tx->t.rdm.tx_rdc_ready) &&
 	    !TAILQ_ON_LIST(tx, tx_link)) {
@@ -1225,6 +1232,7 @@ usdf_rdm_check_seq_id(struct usdf_rdm_connection *rdc, struct usdf_rx *rx,
 			usdf_set_nak(rdc, msg_id, -1);
 		} else if (TAILQ_EMPTY(&rx->r.rdm.rx_posted_rqe)) {
 			USDF_WARN("RX overrun?????\n"); /* XXX */
+			rx->stats.num_rx_overruns++;
 			usdf_set_nak(rdc, msg_id, -1);
 		} else {
 			rqe = TAILQ_FIRST(&rx->r.rdm.rx_posted_rqe);
@@ -1480,22 +1488,43 @@ usdf_rdm_handle_recv(struct usdf_domain *udp, struct usd_completion *comp)
 	pkt = comp->uc_context;
 	opcode = ntohs(pkt->msg.opcode);
 
+	rx->stats.num_total_recvs++;
+
 	rdc = usdf_rdm_rdc_rx_get(rx, pkt);
 	if (rdc == NULL) {
 		goto repost;
 	}
-//printf("RX opcode=%u\n", opcode);
 
-	if (comp->uc_status != USD_COMPSTAT_SUCCESS)
+	switch (comp->uc_status) {
+	case USD_COMPSTAT_SUCCESS:
+		rx->stats.num_success_recvs++;
+		break;
+	case USD_COMPSTAT_ERROR_CRC:
+		rx->stats.num_error_crc_recvs++;
 		goto repost;
+	case USD_COMPSTAT_ERROR_TRUNC:
+		rx->stats.num_error_trunc_recvs++;
+		goto repost;
+	case USD_COMPSTAT_ERROR_TIMEOUT:
+		rx->stats.num_error_timeout_recvs++;
+		goto repost;
+	case USD_COMPSTAT_ERROR_INTERNAL:
+		rx->stats.num_error_internal_recvs++;
+		goto repost;
+	default:
+		rx->stats.num_error_unknown_recvs++;
+		goto repost;
+	}
 
 	switch (opcode) {
 	case RUDP_OP_ACK:
 		usdf_rdm_rx_ack(rdc, rx->r.rdm.rx_tx, pkt);
+		rx->stats.num_ack_recvs++;
 		goto repost;
 
 	case RUDP_OP_NAK:
 		usdf_rdm_rx_nak(rdc, rx->r.rdm.rx_tx, pkt);
+		rx->stats.num_nak_recvs++;
 		goto repost;
 	default:
 		break;

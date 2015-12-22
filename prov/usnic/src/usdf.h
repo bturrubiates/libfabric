@@ -44,7 +44,6 @@
 #include "usdf_progress.h"
 #include "usd.h"
 
-
 #define USDF_PROV_NAME "usnic"
 #define USDF_MAJOR_VERS 1
 #define USDF_MINOR_VERS 0
@@ -186,6 +185,29 @@ struct usdf_pep {
 #define pep_utof(PEP) (&(PEP)->pep_fid)
 #define pep_utofid(PEP) (&(PEP)->pep_fid.fid)
 
+struct usdf_ep_stats {
+	uint64_t num_total_recvs;
+	uint64_t num_total_sends;
+
+	/* usd_completion_status */
+	uint64_t num_success_recvs;
+	uint64_t num_error_crc_recvs;
+	uint64_t num_error_trunc_recvs;
+	uint64_t num_error_timeout_recvs;
+	uint64_t num_error_internal_recvs;
+	uint64_t num_error_unknown_recvs;
+
+	uint64_t num_success_sends;
+
+	uint64_t num_ack_sends;
+	uint64_t num_nak_sends;
+
+	uint64_t num_ack_recvs;
+	uint64_t num_nak_recvs;
+
+	uint64_t num_rx_overruns;
+};
+
 struct usdf_tx {
 	struct fid_stx tx_fid;
 	atomic_t tx_refcnt;
@@ -195,6 +217,7 @@ struct usdf_tx {
 	struct fi_tx_attr tx_attr;
 	struct usd_qp *tx_qp;
 	void (*tx_progress)(struct usdf_tx *tx);
+	struct usdf_ep_stats stats;
 
 	union {
 		struct {
@@ -232,6 +255,7 @@ struct usdf_rx {
 
 	struct fi_rx_attr rx_attr;
 	struct usd_qp *rx_qp;
+	struct usdf_ep_stats stats;
 
 	union {
 		struct {
@@ -283,6 +307,7 @@ struct usdf_ep {
 
 	struct usdf_tx *ep_tx;
 	struct usdf_rx *ep_rx;
+
 
 	union {
 		struct {
@@ -466,5 +491,9 @@ void usdf_setup_fake_ibv_provider(void);
 
 /* passive endpoint functions */
 int usdf_pep_steal_socket(struct usdf_pep *pep, int *is_bound, int *sock_o);
+
+/* stats */
+void usdf_reset_stats(struct fid_ep *ep);
+void usdf_print_stats(struct fid_ep *ep);
 
 #endif /* _USDF_H_ */
