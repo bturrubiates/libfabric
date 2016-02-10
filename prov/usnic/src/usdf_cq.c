@@ -1253,6 +1253,11 @@ usdf_cq_open(struct fid_domain *domain, struct fi_cq_attr *attr,
 	}
 
 	cq->cq_attr = *attr;
+	ret = usdf_cq_create_cq(cq);
+	if (ret != 0) {
+		USDF_WARN("Create cq in usdf_cq_open failed with ret:%d\n",ret);
+		return ret;
+	}
 	*cq_o = &cq->cq_fid;
 	return 0;
 

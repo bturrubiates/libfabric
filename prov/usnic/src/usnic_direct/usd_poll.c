@@ -286,7 +286,11 @@ int usd_poll_req_notify(struct usd_cq *ucq)
      * interrupt source from cq happens at control path tear down stage, when
      * data path is already finished.
      */
-    if (cq->comp_fd != -1 && cq->ucq_intr != NULL)
+    if (!cq) {
+        usd_err("%s: cq passed is not valid(NULL) \n",__FUNCTION__);
+    }
+
+    if (cq && cq->comp_fd != -1 && cq->ucq_intr != NULL)
         vnic_intr_unmask(&cq->ucq_intr->uci_vintr);
 
     return 0;
