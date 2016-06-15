@@ -299,7 +299,7 @@ usdf_eq_read_fd(struct fid_eq *feq, uint32_t *event, void *buf, size_t len,
 		goto done;
 	}
 
-	if ((flags & FI_PEEK) != 0) {
+	if ((flags & FI_PEEK) == 0) {
 		/* consume the event in eventfd */
 		ret = read(eq->eq_fd, &val, sizeof(val));
 		if (ret != sizeof(val)) {
