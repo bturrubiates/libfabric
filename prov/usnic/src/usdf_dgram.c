@@ -62,6 +62,22 @@
 #include "usdf_dgram.h"
 #include "usdf_av.h"
 
+static inline int _verify_credits(unsigned (*credit_func)(struct usd_qp *),
+	struct usd_qp *uqp, unsigned requested)
+{
+	unsigned available = credit_func(uqp);
+	char msg[64] = {0};
+
+	if (available < requested) {
+		snprintf(msg, sizeof(msg), "low on credits: <%u - %u = %u>",
+				requested, available, requested - available);
+
+		return -FI_EAGAIN;
+	}
+
+	return FI_SUCCESS;
+}
+
 static inline size_t _usdf_iov_len(const struct iovec *iov, size_t count)
 {
 	size_t len;
@@ -138,6 +154,10 @@ usdf_dgram_recv(struct fid_ep *fep, void *buf, size_t len,
 	ep = ep_ftou(fep);
 	qp = to_qpi(ep->e.dg.ep_qp);
 
+	/* One credit for the header, one for the data. */
+	if (_verify_credits(usd_get_recv_credits, ep->e.dg.ep_qp, 2))
+		return -FI_EAGAIN;
+
 	index = qp->uq_rq.urq_post_index;
 	rxd.urd_context = context;
 	rxd.urd_iov[0].iov_base = (uint8_t *)ep->e.dg.ep_hdr_buf_iova +
@@ -172,6 +192,10 @@ usdf_dgram_recvv(struct fid_ep *fep, const struct iovec *iov, void **desc,
 
 	ep = ep_ftou(fep);
 	qp = to_qpi(ep->e.dg.ep_qp);
+
+	/* Credits consumed should be equal to count plus one for the header. */
+	if (_verify_credits(usd_get_recv_credits, ep->e.dg.ep_qp, count + 1))
+		return -FI_EAGAIN;
 
 	rxd.urd_context = context;
 	rxd.urd_iov[0].iov_base = ep->e.dg.ep_hdr_buf_iova +
@@ -211,6 +235,11 @@ usdf_dgram_recvmsg(struct fid_ep *fep, const struct fi_msg *msg, uint64_t flags)
 	vrq = &rq->urq_vnic_rq;
 	desc = rq->urq_next_desc;
 	index = rq->urq_post_index;
+
+	/* Credits consumed is equal to IOV count plus one for the header. */
+	if (_verify_credits(usd_get_recv_credits, ep->e.dg.ep_qp,
+				msg->iov_count + 1))
+		return -FI_EAGAIN;
 
 	iovp = msg->msg_iov;
 	rq->urq_context[index] = msg->context;
@@ -257,6 +286,10 @@ usdf_dgram_send(struct fid_ep *fep, const void *buf, size_t len, void *desc,
 	ep = ep_ftou(fep);
 	dest = (struct usdf_dest *)(uintptr_t) dest_addr;
 	flags = (ep->ep_tx_completion) ? USD_SF_SIGNAL : 0;
+
+	/* One credit for the header, one for the data. */
+	if (_verify_credits(usd_get_send_credits, ep->e.dg.ep_qp, 2))
+		return -FI_EAGAIN;
 
 	if (len + sizeof(struct usd_udp_hdr) <= USD_SEND_MAX_COPY) {
 		return usd_post_send_one_copy(ep->e.dg.ep_qp, &dest->ds_dest,
@@ -371,6 +404,10 @@ usdf_dgram_sendv(struct fid_ep *fep, const struct iovec *iov, void **desc,
 	len = sizeof(struct usd_udp_hdr);
 	dest = (struct usd_dest *)(uintptr_t) dest_addr;
 
+	/* Credits consumed is equal to IOV count plus one for header. */
+	if (_verify_credits(usd_get_send_credits, ep->e.dg.ep_qp, count + 1))
+		return -FI_EAGAIN;
+
 	len += _usdf_iov_len(iov, count);
 
 	if (len <= USD_SEND_MAX_COPY) {
@@ -405,6 +442,11 @@ usdf_dgram_sendmsg(struct fid_ep *fep, const struct fi_msg *msg, uint64_t flags)
 	dest = (struct usd_dest *)(uintptr_t) msg->addr;
 	completion = ep->ep_tx_dflt_signal_comp || (flags & FI_COMPLETION);
 
+	/* Credits consumed is equal to IOV count plus one for header. */
+	if (_verify_credits(usd_get_send_credits, ep->e.dg.ep_qp,
+				msg->iov_count + 1))
+		return -FI_EAGAIN;
+
 	len += _usdf_iov_len(msg->msg_iov, msg->iov_count);
 
 	if (len <= USD_SEND_MAX_COPY) {
@@ -438,6 +480,10 @@ usdf_dgram_inject(struct fid_ep *fep, const void *buf, size_t len,
 
 	ep = ep_ftou(fep);
 	dest = (struct usdf_dest *)(uintptr_t) dest_addr;
+
+	/* Credits consumed 1. */
+	if (_verify_credits(usd_get_send_credits, ep->e.dg.ep_qp, 1))
+		return -FI_EAGAIN;
 
 	if (len + sizeof(struct usd_udp_hdr) > USD_SEND_MAX_COPY) {
 		USDF_DBG_SYS(EP_DATA,
@@ -512,6 +558,10 @@ usdf_dgram_prefix_recv(struct fid_ep *fep, void *buf, size_t len,
 	ep = ep_ftou(fep);
 	qp = to_qpi(ep->e.dg.ep_qp);
 
+	/* Credits consumed is 1. */
+	if (_verify_credits(usd_get_recv_credits, ep->e.dg.ep_qp, 1))
+		return -FI_EAGAIN;
+
 	index = qp->uq_rq.urq_post_index;
 	rxd.urd_context = context;
 	rxd.urd_iov[0].iov_base = (uint8_t *)buf +
@@ -538,6 +588,10 @@ usdf_dgram_prefix_recvv(struct fid_ep *fep, const struct iovec *iov,
 
 	ep = ep_ftou(fep);
 	qp = to_qpi(ep->e.dg.ep_qp);
+
+	/* Credits consumed is count. */
+	if (_verify_credits(usd_get_recv_credits, ep->e.dg.ep_qp, count))
+		return -FI_EAGAIN;
 
 	rxd.urd_context = context;
 	memcpy(&rxd.urd_iov[0], iov, sizeof(*iov) * count);
@@ -577,6 +631,11 @@ usdf_dgram_prefix_recvmsg(struct fid_ep *fep, const struct fi_msg *msg, uint64_t
 	vrq = &rq->urq_vnic_rq;
 	desc = rq->urq_next_desc;
 	index = rq->urq_post_index;
+
+	/* Credits consumed is msg->iov_count. */
+	if (_verify_credits(usd_get_recv_credits, ep->e.dg.ep_qp,
+				msg->iov_count))
+		return -FI_EAGAIN;
 
 	iovp = msg->msg_iov;
 	rq->urq_context[index] = msg->context;
@@ -632,6 +691,10 @@ usdf_dgram_prefix_send(struct fid_ep *fep, const void *buf, size_t len,
 	dest = (struct usdf_dest *)(uintptr_t) dest_addr;
 	padding = USDF_HDR_BUF_ENTRY - sizeof(struct usd_udp_hdr);
 	flags = (ep->ep_tx_completion) ? USD_SF_SIGNAL : 0;
+
+	/* Credits consumed is 1. */
+	if (_verify_credits(usd_get_send_credits, ep->e.dg.ep_qp, 1))
+		return -FI_EAGAIN;
 
 	if (ep->e.dg.tx_op_flags & FI_INJECT) {
 		if ((len - padding) > USD_SEND_MAX_COPY) {
@@ -713,6 +776,10 @@ usdf_dgram_prefix_sendv(struct fid_ep *fep, const struct iovec *iov,
 	len = _usdf_iov_len(iov, count);
 	padding = USDF_HDR_BUF_ENTRY - sizeof(struct usd_udp_hdr);
 
+	/* Credits consumed is count. */
+	if (_verify_credits(usd_get_send_credits, ep->e.dg.ep_qp, count))
+		return -FI_EAGAIN;
+
 	if (count > ep->e.dg.tx_iov_limit) {
 		USDF_DBG_SYS(EP_DATA, "max iov count exceeded: %zu\n", count);
 		return -FI_ENOSPC;
@@ -757,6 +824,11 @@ usdf_dgram_prefix_sendmsg(struct fid_ep *fep, const struct fi_msg *msg,
 	len = _usdf_iov_len(msg->msg_iov, msg->iov_count);
 	completion = ep->ep_tx_dflt_signal_comp || (flags & FI_COMPLETION);
 	padding = USDF_HDR_BUF_ENTRY - sizeof(struct usd_udp_hdr);
+
+	/* Credits consumed is msg->iov_count. */
+	if (_verify_credits(usd_get_send_credits, ep->e.dg.ep_qp,
+				msg->iov_count))
+		return -FI_EAGAIN;
 
 	if (msg->iov_count > ep->e.dg.tx_iov_limit) {
 		USDF_DBG_SYS(EP_DATA, "max iov count exceeded: %zu\n",
