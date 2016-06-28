@@ -35,6 +35,11 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
+#include <pthread.h>
+
+#include <sys/types.h>
+#include <sys/stat.h>
 
 #include <rdma/fi_errno.h>
 #include <rdma/fi_log.h>
@@ -142,17 +147,90 @@ int DEFAULT_SYMVER_PRE(fi_log_enabled)(const struct fi_provider *prov, enum fi_l
 }
 DEFAULT_SYMVER(fi_log_enabled_, fi_log_enabled);
 
+struct log_handle {
+	char *filename;
+	FILE *fp;
+	pid_t pid;
+};
+
+struct log_handle *handle;
+
+void fill_handle(struct log_handle *out)
+{
+	const char *directory = "usdfv-log";
+	size_t size;
+	int ret;
+
+	handle->pid = getpid();
+
+	ret = mkdir(directory, 0700);
+	if (ret && errno != EEXIST) {
+		fprintf(stderr, "libfabric: Failed to create logging directory\n");
+		return;
+	}
+
+	size = snprintf(NULL, 0, "%s/usdfv-%d.log", directory, handle->pid) + 1;
+	handle->filename = calloc(1, size);
+	if (!handle->filename) {
+		fprintf(stderr, "Logging failed to initialize\n");
+		return;
+	}
+
+	sprintf(handle->filename, "%s/usdfv-%d.log", directory, handle->pid);
+	handle->fp = fopen(handle->filename, "a+");
+	if (!out->fp)
+		fprintf(stderr, "Log file creation failed: %s\n",
+				strerror(errno));
+}
+
+void child_fork_handler(void)
+{
+	fill_handle(handle);
+}
+
+static void init_logging(void)
+{
+	handle = calloc(1, sizeof(*handle));
+	if (!handle) {
+		fprintf(stderr, "failed to allocate log handle\n");
+		return;
+	}
+
+	fill_handle(handle);
+
+	pthread_atfork(NULL, NULL, child_fork_handler);
+}
+
+static __attribute__((destructor)) void destruct_logging(void)
+{
+	if (handle) {
+		free(handle->filename);
+		fclose(handle->fp);
+		free(handle);
+		handle = NULL;
+	}
+}
+
 __attribute__((visibility ("default")))
 void DEFAULT_SYMVER_PRE(fi_log)(const struct fi_provider *prov, enum fi_log_level level,
 	    enum fi_log_subsys subsys, const char *func, int line,
 	    const char *fmt, ...)
 {
-	char buf[1024];
+	pid_t current_pid;
+	char buf[2048];
 	int size;
 
 	va_list vargs;
 
-	size = snprintf(buf, sizeof(buf), "%s:%s:%s:%s():%d<%s> ", PACKAGE,
+	if (!handle) {
+		init_logging();
+		if (!handle)
+			return;
+	}
+
+	current_pid = getpid();
+	size = snprintf(buf, sizeof(buf), "[%d]:%s:%s:%s:%s():%d<%s> ",
+			current_pid, PACKAGE,
 			prov->name, log_subsys[subsys], func, line,
 			log_levels[level]);
 
@@ -160,6 +238,7 @@ void DEFAULT_SYMVER_PRE(fi_log)(const struct fi_provider *prov, enum fi_log_leve
 	vsnprintf(buf + size, sizeof(buf) - size, fmt, vargs);
 	va_end(vargs);
 
-	fprintf(stderr, "%s", buf);
+	fprintf(handle->fp, "%s", buf);
+	fflush(handle->fp);
 }
 DEFAULT_SYMVER(fi_log_, fi_log);

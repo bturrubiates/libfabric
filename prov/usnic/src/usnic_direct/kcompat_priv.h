@@ -45,6 +45,7 @@
 
 #include <stdint.h>
 #include <stdio.h>
+#include "rdma/fi_log.h"
 
 struct pci_dev;
 typedef uint64_t dma_addr_t;
@@ -84,7 +85,10 @@ static inline void pci_free_consistent( __attribute__ ((unused))
     (void) usd_free_mr(vaddr);
 }
 
-#define usd_err(args...) fprintf(stderr, args)
+extern struct fi_provider usdf_ops;
+
+#define usd_err(args...) fi_log(&usdf_ops, FI_LOG_WARN, FI_LOG_EP_DATA,        \
+		__func__, __LINE__, args);
 #define pr_err usd_err
 #define pr_warning(args...)
 
