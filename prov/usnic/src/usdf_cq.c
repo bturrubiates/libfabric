@@ -86,8 +86,6 @@ usdf_cq_readerr(struct fid_cq *fcq, struct fi_cq_err_entry *entry,
 {
 	struct usdf_cq *cq;
 
-	USDF_TRACE_SYS(CQ, "\n");
-
 	cq = container_of(fcq, struct usdf_cq, cq_fid);
 
 	// The return values are analogous to sockets cq_readerr
@@ -127,8 +125,6 @@ usdf_cq_readerr_soft(struct fid_cq *fcq, struct fi_cq_err_entry *entry,
 {
 	struct usdf_cq *cq;
 	struct usdf_cq_soft_entry *tail;
-
-	USDF_TRACE_SYS(CQ, "\n");
 
 	cq = container_of(fcq, struct usdf_cq, cq_fid);
 
@@ -304,7 +300,7 @@ static ssize_t
 usdf_cq_sread_context(struct fid_cq *fcq, void *buf, size_t count,
 			const void *cond, int timeout)
 {
-	return usdf_cq_sread_common(fcq, buf, count, cond, timeout, 
+	return usdf_cq_sread_common(fcq, buf, count, cond, timeout,
 					FI_CQ_FORMAT_CONTEXT);
 }
 
@@ -455,7 +451,7 @@ usdf_cq_readfrom_context(struct fid_cq *fcq, void *buf, size_t count,
 			}
 			++src_addr;
 		}
-			
+
 
 		entry->op_context = cq->cq_comp.uc_context;
 
@@ -856,7 +852,7 @@ usdf_cq_readfrom_context_soft(struct fid_cq *fcq, void *buf, size_t count,
 			}
 			++src_addr;
 		}
-			
+
 
 		entry->op_context = cq->cq_comp.uc_context;
 
@@ -889,7 +885,6 @@ usdf_cq_strerror(struct fid_cq *eq, int prov_errno, const void *err_data,
 static int
 usdf_cq_control(fid_t fid, int command, void *arg)
 {
-	USDF_TRACE_SYS(CQ, "\n");
 	return -FI_ENOSYS;
 }
 
@@ -994,8 +989,6 @@ static int usdf_req_notify_cq(struct fid_cq *fcq)
 {
 	struct usdf_cq *cq;
         struct fi_ops_cq *hard_ops;
-
-	USDF_TRACE_SYS(CQ, "\n");
 
 	cq = cq_ftou(fcq);
 

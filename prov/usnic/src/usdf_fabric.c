@@ -545,8 +545,6 @@ usdf_get_distance(
     uint32_t nh_ip_addr;
     int ret;
 
-    USDF_TRACE("\n");
-
     ret = usnic_nl_rt_lookup(dap->uda_ipaddr_be, daddr_be,
             dap->uda_ifindex, &nh_ip_addr);
     if (ret != 0) {
