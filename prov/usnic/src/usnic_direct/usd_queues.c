@@ -48,6 +48,10 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+
 #include <netinet/in.h>
 #include <infiniband/verbs.h>
 
