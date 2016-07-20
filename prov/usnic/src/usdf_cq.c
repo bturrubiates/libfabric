@@ -177,11 +177,7 @@ static inline void usdf_cq_adjust_len(struct usd_completion *src,
 	struct usdf_ep *ep = src->uc_qp->uq_context;
 
 	if (src->uc_type == USD_COMPTYPE_RECV) {
-		if (ep->ep_mode & FI_MSG_PREFIX)
-			*len += (USDF_HDR_BUF_ENTRY -
-					sizeof(struct usd_udp_hdr));
-		else
-			*len -= sizeof(struct usd_udp_hdr);
+		*len -= sizeof(struct usd_udp_hdr);
 	} else {
 		if (ep->ep_mode & FI_MSG_PREFIX)
 			*len += USDF_HDR_BUF_ENTRY;

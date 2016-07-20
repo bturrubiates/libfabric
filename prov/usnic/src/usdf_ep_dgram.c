@@ -298,7 +298,7 @@ static struct fi_ops_ep usdf_base_dgram_ops = {
 	.setopt = fi_no_setopt,
 	.tx_ctx = fi_no_tx_ctx,
 	.rx_ctx = fi_no_rx_ctx,
-	.rx_size_left = usdf_dgram_rx_size_left,
+	.rx_size_left = usdf_dgram_prefix_rx_size_left,
 	.tx_size_left = usdf_dgram_tx_size_left,
 };
 
@@ -315,9 +315,9 @@ static struct fi_ops_ep usdf_base_dgram_prefix_ops = {
 
 static struct fi_ops_msg usdf_dgram_ops = {
 	.size = sizeof(struct fi_ops_msg),
-	.recv = usdf_dgram_recv,
-	.recvv = usdf_dgram_recvv,
-	.recvmsg = usdf_dgram_recvmsg,
+	.recv = usdf_dgram_prefix_recv,
+	.recvv = usdf_dgram_prefix_recvv,
+	.recvmsg = usdf_dgram_prefix_recvmsg,
 	.send = usdf_dgram_send,
 	.sendv = usdf_dgram_sendv,
 	.sendmsg = usdf_dgram_sendmsg,
