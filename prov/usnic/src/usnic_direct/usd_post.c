@@ -99,6 +99,9 @@ usd_post_recv(
                                             + (index<<4));
 
         for (i = 1; i < recv_list->urd_iov_cnt; ++i) {
+            usd_err("IOV: [%u/%zu]: base: %#p, length: %zu, desc: %#p,  index: %d\n",
+                i, recv_list->urd_iov_cnt, iovp[i].iov_base, iovp[i].iov_len,
+                desc, index);
             rq->urq_context[index] = recv_list->urd_context;
             rq_enet_desc_enc(desc, (dma_addr_t) iovp[i].iov_base,
                              RQ_ENET_TYPE_NOT_SOP, iovp[i].iov_len);
