@@ -45,6 +45,8 @@
 
 #include <sys/uio.h>
 
+#include <inttypes.h>
+
 #include "usd.h"
 #include "usd_util.h"
 
@@ -200,8 +202,9 @@ _usd_post_send_iov(
     index = wq->uwq_post_index;
 
     for (i = 0; i < count - 1; i++) {
-        usd_err("IOV: [%u/%zu]: base: %#p, length: %zu, desc: %#p, index: %d\n",
-            i + 1, count, iov[i].iov_base, iov[i].iov_len, desc, index)
+        usd_err("IOV [%u/%zu] -- base: %#p, length: %zu, desc: %#p, post_index: %" PRIu32 ", queue_index: %" PRIu32 "\n",
+            i + 1, count, iov[i].iov_base, iov[i].iov_len, desc, index,
+            wq->uwq_index)
 
         wq_enet_desc_enc(desc, (uintptr_t)(iov[i].iov_base),
             iov[i].iov_len, mss, header_length, offload_mode,
@@ -211,8 +214,9 @@ _usd_post_send_iov(
         index = (index+1) & wq->uwq_post_index_mask;
     }
 
-    usd_err("IOV: [%u/%zu]: base: %#p, length: %zu, desc: %#p, index: %d\n",
-        i + 1, count, iov[i].iov_base, iov[i].iov_len, desc, index)
+    usd_err("IOV [%u/%zu] -- base: %#p, length: %zu, desc: %#p, post_index: %" PRIu32 ", queue_index: %" PRIu32 "\n",
+            i + 1, count, iov[i].iov_base, iov[i].iov_len, desc, index,
+            wq->uwq_index)
 
     wq_enet_desc_enc(desc, (uintptr_t)(iov[i].iov_base),
             iov[i].iov_len, mss, header_length, offload_mode,

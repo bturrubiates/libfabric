@@ -448,6 +448,7 @@ usdf_dgram_sendmsg(struct fid_ep *fep, const struct fi_msg *msg, uint64_t flags)
 
 	len += _usdf_iov_len(msg->msg_iov, msg->iov_count);
 
+	/*
 	if (len <= USD_SEND_MAX_COPY) {
 		return _usdf_dgram_send_iov_copy(ep, dest, msg->msg_iov,
 							msg->iov_count,
@@ -459,6 +460,7 @@ usdf_dgram_sendmsg(struct fid_ep *fep, const struct fi_msg *msg, uint64_t flags)
 				len, USD_SEND_MAX_COPY);
 		return -FI_ENOSPC;
 	}
+	*/
 
 	if (msg->iov_count > ep->e.dg.tx_iov_limit) {
 		USDF_DBG_SYS(EP_DATA, "max iov count exceeded: %zu\n",
