@@ -37,6 +37,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <stdbool.h>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -148,39 +149,95 @@ int DEFAULT_SYMVER_PRE(fi_log_enabled)(const struct fi_provider *prov, enum fi_l
 DEFAULT_SYMVER(fi_log_enabled_, fi_log_enabled);
 
 struct log_handle {
-	char *filename;
 	FILE *fp;
 	pid_t pid;
 };
 
 struct log_handle *handle;
 
-void fill_handle(struct log_handle *out)
+static int
+set_log_to_file(struct log_handle *out)
 {
 	const char *directory = "usdfv-log";
-	size_t size;
+	char filename[PATH_MAX];
+	int size;
 	int ret;
-
-	handle->pid = getpid();
 
 	ret = mkdir(directory, 0700);
 	if (ret && errno != EEXIST) {
-		fprintf(stderr, "libfabric: Failed to create logging directory\n");
-		return;
+		fprintf(stderr,
+			"libfabric: Failed to create logging directory\n");
+		return -1;
 	}
 
-	size = snprintf(NULL, 0, "%s/usdfv-%d.log", directory, handle->pid) + 1;
-	handle->filename = calloc(1, size);
-	if (!handle->filename) {
-		fprintf(stderr, "Logging failed to initialize\n");
-		return;
+	/* Generate a filename in the form of usdfv-PID.log */
+	size = snprintf(filename, sizeof(filename), "%s/usdfv-%d.log",
+			directory, out->pid);
+	if (size < 0) {
+		fprintf(stderr,
+			"libfabric: Error generating filename for logs\n");
+		goto err_rm_dir;
 	}
 
-	sprintf(handle->filename, "%s/usdfv-%d.log", directory, handle->pid);
-	handle->fp = fopen(handle->filename, "a+");
-	if (!out->fp)
-		fprintf(stderr, "Log file creation failed: %s\n",
-				strerror(errno));
+	if ((size_t) size > sizeof(filename)) {
+		fprintf(stderr, "libfabric: Truncated filename\n");
+		goto err_rm_dir;
+	}
+
+	out->fp = fopen(filename, "a+");
+	if (!out->fp) {
+		fprintf(stderr,
+			"libfabric: Temporary file creation failed: %s\n",
+			strerror(errno));
+		goto err_rm_dir;
+	}
+
+	/* Try to set file to unbuffered mode of operation */
+	ret = setvbuf(out->fp, NULL, _IONBF, 0);
+	if (ret) {
+		fprintf(stderr,
+			"libfabric: Failed to set stream to unbuffered mode: %s\n",
+			strerror(errno));
+		goto err_close_file;
+	}
+
+	return 0;
+
+err_close_file:
+	fclose(out->fp);
+err_rm_dir:
+	ret = rmdir(directory);
+	if (ret)
+		fprintf(stderr,
+			"libfabric: failed to remove directory after error\n");
+
+	return -1;
+}
+
+void
+fill_handle(struct log_handle *out)
+{
+	bool log_to_file = false;
+	int ret;
+
+	if (getenv("FI_LOG_TO_FILE"))
+		log_to_file = true;
+
+	out->pid = getpid();
+
+#if ENABLE_LOG_TO_FILE
+	log_to_file = true;
+#endif
+
+	if (log_to_file) {
+		ret = set_log_to_file(out);
+		if (ret) {
+			fprintf(stderr, "usdfv: falling back to stderr\n");
+			out->fp = stderr;
+		}
+	} else {
+		out->fp = stderr;
+	}
 }
 
 void child_fork_handler(void)
@@ -204,8 +261,8 @@ static void init_logging(void)
 static __attribute__((destructor)) void destruct_logging(void)
 {
 	if (handle) {
-		free(handle->filename);
-		fclose(handle->fp);
+		if (handle->fp != stderr)
+			fclose(handle->fp);
 		free(handle);
 		handle = NULL;
 	}

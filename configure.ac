@@ -41,6 +41,27 @@ AC_ARG_ENABLE([debug],
 AC_DEFINE_UNQUOTED([ENABLE_DEBUG],[$dbg],
                    [defined to 1 if libfabric was configured with --enable-debug, 0 otherwise])
 
+AC_ARG_ENABLE([log-to-file],
+	[AS_HELP_STRING([--enable-log-to-file],
+			[Enable logging to file - default NO])
+	],
+	[log_to_file=1],
+	[log_to_file=0])
+
+AC_DEFINE_UNQUOTED([ENABLE_LOG_TO_FILE], [$log_to_file],
+		   [defined to 1 if libusnic_verbs_f was configured with --enable-log-to-file])
+
+AC_ARG_ENABLE([log-level-skip-check],
+	[AS_HELP_STRING([--enable-log-level-skip-check],
+			[Ignore log levels and enable all logging - default NO])
+	],
+	[log_level_skip_check=1],
+	[log_level_skip_check=0])
+
+AC_DEFINE_UNQUOTED([ENABLE_LOG_LEVEL_SKIP_CHECK], [$log_level_skip_check],
+		   [defined to 1 if libusnic_verbs_f was configured with --log-level-skip-check])
+
+
 dnl Fix autoconf's habit of adding -g -O2 by default
 AS_IF([test -z "$CFLAGS"],
       [CFLAGS='-fvisibility=hidden -O2 -DNDEBUG -Wall -Wundef'])
