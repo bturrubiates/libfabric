@@ -47,6 +47,7 @@
 #include <sys/mman.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <stdarg.h>
 
 #include <netinet/in.h>
 #include <infiniband/verbs.h>
@@ -64,7 +65,127 @@
 #include "usd_vnic.h"
 #include "usd_device.h"
 
+#include <stdint.h>
+#include <inttypes.h>
+
 static int usd_create_qp_ud(struct usd_qp_impl *qp);
+
+#define DEBUG_BUF_SZ 2048
+
+static void
+_append_str(char *buf, const char *fmt, ...)
+{
+    size_t len = strnlen(buf, DEBUG_BUF_SZ);
+    va_list arglist;
+
+    va_start(arglist, fmt);
+    vsnprintf(&buf[len], DEBUG_BUF_SZ - len - 1, fmt, arglist);
+    va_end(arglist);
+}
+
+void
+_describe_memory_region(
+    char *debug_buf,
+    const char *description,
+    void *base)
+{
+    uintptr_t *vaddr = base;
+
+    _append_str(debug_buf, "\tMemory Region: %s --\n", description);
+    _append_str(debug_buf, "\t\t%-20s %#" PRIx32 "\n", "Magic number:",
+        (uint32_t) (vaddr[-4]));
+    _append_str(debug_buf, "\t\t%-20s %p\n", "Base Address:",
+        (void *) (vaddr[-1]));
+    _append_str(debug_buf, "\t\t%-20s %zu\n", "True Size:",
+        (size_t) (vaddr[-2]));
+    _append_str(debug_buf, "\t\t%-20s %zu\n", "Madv Size:",
+        (size_t) (vaddr[-3]));
+}
+
+void
+_describe_queue_data(
+    char *debug_buf,
+    const char *description,
+    struct usd_qp_impl *qp,
+    void *queue,
+    uint32_t queue_magic,
+    uint32_t q_index,
+    const char *file,
+    int line)
+{
+    _append_str(debug_buf, "[%ld][%s]<%d>: Queue: %s --\n", (long) getpid(),
+            file, line, description);
+    _append_str(debug_buf, "\t%-28s %p\n", "Queue Pointer:", queue);
+    _append_str(debug_buf, "\t%-28s %#" PRIx32 "\n", "Magic Number:",
+            queue_magic);
+    _append_str(debug_buf, "\t%-28s %" PRIu32 "\n", "VF ID:",
+            qp->uq_vf->vf_id);
+    _append_str(debug_buf, "\t%-28s %" PRIu32 "\n\n", "Index:", q_index);
+}
+
+void
+_describe_queue(
+    const char *description,
+    struct usd_qp_impl *qp,
+    void *queue,
+    uint32_t queue_magic,
+    uint32_t q_index,
+    void *desc_ring,
+    const char *file,
+    int line)
+{
+    char debug_buf[DEBUG_BUF_SZ] = {0};
+
+    _describe_queue_data(debug_buf, description, qp, queue, queue_magic,
+            q_index, file, line);
+    _describe_memory_region(debug_buf, "queue desc ring", desc_ring);
+
+    usd_err("--\n%s", debug_buf);
+}
+
+void
+_describe_queue_debug(
+    const char *description,
+    struct usd_qp_impl *qp,
+    void *queue,
+    uint32_t queue_magic,
+    uint32_t q_index,
+    void *desc_ring,
+    const char *file,
+    int line)
+{
+    if (getenv("USD_DBG_DESCRIPTOR")) {
+        _describe_queue(description, qp, queue, queue_magic, q_index, desc_ring,
+                file, line);
+    }
+}
+
+void
+_describe_queue_pair(
+    const char *description,
+    struct usd_qp *uqp,
+    const char *file,
+    int line)
+{
+    char debug_buf[DEBUG_BUF_SZ] = {0};
+    struct usd_qp_impl *qp = to_qpi(uqp);
+    struct usd_rq *rq = &qp->uq_rq;
+    struct usd_wq *wq = &qp->uq_wq;
+
+    _append_str(debug_buf, "[%ld][%s]<%d>: Queue Pair: %s -- \n",
+            getpid(), file, line, description);
+
+    _describe_queue_data(debug_buf, "rq", qp, rq, rq->magic, rq->urq_index,
+            file, line);
+    _describe_memory_region(debug_buf, "rq desc ring", rq->urq_desc_ring);
+
+    _describe_queue_data(debug_buf, "wq", qp, wq, wq->magic, wq->uwq_index,
+            file, line);
+    _describe_memory_region(debug_buf, "wq desc ring", wq->uwq_desc_ring);
+
+    usd_err("--\n%s", debug_buf);
+}
+
 
 /*
  * Remove a usecount on a VF, free it if it goes to zero
@@ -554,6 +675,9 @@ usd_create_wq(
         wq->uwq_post_index_mask = (wq->uwq_num_entries-1);
         wq->uwq_post_index = 1;
         wq->uwq_last_comp = (wq->uwq_num_entries-1);
+
+        DESCRIBE_QUEUE("wq after init", qp, wq, wq->magic, wq->uwq_index,
+                wq->uwq_desc_ring);
     }
 
     return ret;
@@ -613,6 +737,9 @@ usd_create_rq(struct usd_qp_impl *qp)
     ret = usd_alloc_mr(qp->uq_dev, ring_size, (void **)&rq->urq_desc_ring);
     if (ret != 0)
         return ret;
+
+    DESCRIBE_QUEUE("rq after init", qp, rq, rq->magic, rq->urq_index,
+            rq->urq_desc_ring);
 
     ret = usd_vnic_rq_init(rq, qp->uq_vf, (uint64_t)rq->urq_desc_ring);
     if (ret != 0)
@@ -1062,6 +1189,20 @@ usd_destroy_qp(
     wq = &qp->uq_wq;
     rq = &qp->uq_rq;
 
+    if (rq->magic != 0xDEADDEAD) {
+        usd_err("Magic variable corrupted in RQ\n");
+        DESCRIBE_QUEUE("rq in destroy QP", qp, rq, rq->magic, rq->urq_index,
+                rq->urq_desc_ring);
+        exit(1);
+    }
+
+    if (wq->magic != 0xDEADDEAD) {
+        usd_err("Magic variable corrupted in WQ\n");
+        DESCRIBE_QUEUE("wq in destroy QP", qp, rq, wq->magic, wq->uwq_index,
+                wq->uwq_desc_ring);
+        exit(1);
+    }
+
     if (wq->uwq_state & USD_QS_READY)
         usd_disable_qp(uqp);
 
@@ -1287,10 +1428,12 @@ usd_create_qp(
     rq = &qp->uq_rq;
     rq->urq_num_entries = num_rq_entries;
     rq->urq_cq = rcq;
+    rq->magic = 0xDEADDEAD;
 
     wq = &qp->uq_wq;
     wq->uwq_num_entries = num_wq_entries;
     wq->uwq_cq = wcq;
+    wq->magic = 0xDEADDEAD;
 
     /* do filter setup */
     ret = usd_filter_alloc(dev, filt, &qp->uq_filter);

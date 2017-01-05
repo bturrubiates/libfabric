@@ -125,7 +125,7 @@ usd_alloc_mr(
     size_t madv_size;
     int ret;
 
-    metadata_size = sizeof(struct usd_mr) + 3 * sizeof(uintptr_t);
+    metadata_size = sizeof(struct usd_mr) + 4 * sizeof(uintptr_t);
     madv_size = ALIGN(size, sysconf(_SC_PAGESIZE));
     true_size = madv_size + metadata_size + sysconf(_SC_PAGESIZE) - 1;
     base_addr = mmap(NULL, true_size, PROT_READ | PROT_WRITE,
@@ -141,6 +141,7 @@ usd_alloc_mr(
     ((uintptr_t *) vaddr)[-1] = (uintptr_t) mr;
     ((uintptr_t *) vaddr)[-2] = true_size;
     ((uintptr_t *) vaddr)[-3] = madv_size;
+    ((uintptr_t *) vaddr)[-4] = 0xDEADDEAD;
 
     /*
      * Disable copy-on-write for memories internally used by USD.
@@ -195,6 +196,10 @@ usd_free_mr(
     mr = (struct usd_mr *) ((uintptr_t *) vaddr)[-1];
     true_size = ((uintptr_t *) vaddr)[-2];
     madv_size = ((uintptr_t *) vaddr)[-3];
+
+    if (((uintptr_t *) vaddr)[-4] != 0xDEADDEAD) {
+        usd_err("Magic number not in place on mr: %p.\n", mr);
+    }
 
     ret = usd_ib_cmd_dereg_mr(mr->umr_dev, mr);
     if (ret == 0) {

@@ -87,6 +87,20 @@ usd_post_recv(
 
     count = 0;
 
+    if (rq->magic != 0xDEADDEAD) {
+        usd_err("Magic number in rq not correct.\n");
+        DESCRIBE_QUEUE("rq in usd_post_recv", qp, rq, rq->magic, rq->urq_index,
+                rq->urq_desc_ring);
+        exit(1);
+    }
+
+    if (((uintptr_t *) rq->urq_desc_ring)[-4] != 0xDEADDEAD) {
+        usd_err("Magic number in urq desc ring not correct.\n");
+        DESCRIBE_QUEUE("rq in usd_post_recv", qp, rq, rq->magic, rq->urq_index,
+                rq->urq_desc_ring);
+        exit(1);
+    }
+
     while (recv_list != NULL) {
         iovp = recv_list->urd_iov;
         rq->urq_context[index] = recv_list->urd_context;

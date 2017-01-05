@@ -71,6 +71,18 @@
 #define USD_DEBUG 0
 #endif
 
+#define DESCRIBE_QUEUE(description, qp, queue, queue_magic, q_index, desc_ring)\
+    _describe_queue((description), (qp), (queue), (queue_magic), (q_index),    \
+            (desc_ring), __FILE__, __LINE__);
+
+#define DESCRIBE_QUEUE_DEBUG(description, qp, queue, queue_magic, q_index,     \
+        desc_ring)                                                             \
+    _describe_queue_debug((description), (qp), (queue), (queue_magic),         \
+            (q_index), (desc_ring), __FILE__, __LINE__);
+
+#define DESCRIBE_QUEUE_PAIR(description, uqp)                                  \
+    _describe_queue_pair((description), (uqp), __FILE__, __LINE__);
+
 /*
  * Group interrupt vector userspace map info
  */
@@ -250,6 +262,12 @@ struct usd_rq {
     char *urq_rxbuf;
     char **urq_post_addr;
     uint32_t urq_recv_credits;  /* number of available descriptors */
+
+    /* If this magic variable has been trashed, then it is likely that the
+     * descriptor ring has been corrupted.
+     */
+    uint32_t magic;
+
     struct rq_enet_desc *urq_desc_ring;
     struct rq_enet_desc *urq_next_desc;
     uint32_t urq_post_index;    /* next rxbuf to post */
@@ -274,6 +292,12 @@ struct usd_wq {
     uint32_t uwq_index;
     uint32_t uwq_num_entries;
     uint32_t uwq_send_credits;
+
+    /* If this magic variable has been trashed, then it is likely that the
+     * descriptor ring has been corrupted.
+     */
+    uint32_t magic;
+
     struct wq_enet_desc *uwq_desc_ring;
     struct wq_enet_desc *uwq_next_desc;
     uint32_t uwq_post_index;
@@ -321,4 +345,16 @@ struct usd_dest {
 extern struct usd_qp_ops usd_qp_ops_ud_udp;
 extern struct usd_qp_ops usd_qp_ops_ud_pio_udp;
 extern struct usd_qp_ops usd_qp_ops_ud_raw;
+
+void _describe_queue( const char *description, struct usd_qp_impl *qp,
+        void *queue, uint32_t queue_magic, uint32_t q_index, void *desc_ring,
+        const char *file, int line);
+
+void _describe_queue_debug( const char *description, struct usd_qp_impl *qp,
+        void *queue, uint32_t queue_magic, uint32_t q_index, void *desc_ring,
+        const char *file, int line);
+
+void _describe_queue_pair( const char *description, struct usd_qp *uqp,
+        const char *file, int line);
+
 #endif /* _USD_H_ */

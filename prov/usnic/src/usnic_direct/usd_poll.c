@@ -54,6 +54,7 @@ find_rx_lengths(
     size_t *posted_len_o,
     size_t *len_in_pkt_o)
 {
+    struct usd_qp_impl *qp;
     dma_addr_t bus_addr;
     u16 len;
     u8 type;
@@ -62,6 +63,22 @@ find_rx_lengths(
 
     i = q_index;
     rcvbuf_len = 0;
+
+    qp = usd_container_of(rq, struct usd_qp_impl, uq_rq);
+    if (rq->magic != 0xDEADDEAD) {
+        usd_err("Magic number in rq not correct.\n");
+        DESCRIBE_QUEUE("rq in find_rx_lengths", qp, rq, rq->magic, rq->urq_index,
+                rq->urq_desc_ring);
+        exit(1);
+    }
+
+    if (((uintptr_t *) rq->urq_desc_ring)[-4] != 0xDEADDEAD) {
+        usd_err("Magic number in urq desc ring not correct.\n");
+        DESCRIBE_QUEUE("rq in find_rx_lengths", qp, rq, rq->magic, rq->urq_index,
+                rq->urq_desc_ring);
+        exit(1);
+    }
+
     do {
         rq_enet_desc_dec( (struct rq_enet_desc *)
                 ((uintptr_t)rq->urq_desc_ring + (i<<4)),
