@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2016, Cisco Systems, Inc. All rights reserved.
+ * Copyright (c) 2014-2017, Cisco Systems, Inc. All rights reserved.
  *
  * This software is available to you under a choice of one of two
  * licenses.  You may choose to be licensed under the terms of the GNU
@@ -568,19 +568,86 @@ usdf_am_lookup(struct fid_av *av, fi_addr_t fi_addr, void *addr,
 	return 0;
 }
 
-static const char *
-usdf_av_straddr(struct fid_av *av, const void *addr,
-				    char *buf, size_t *len)
+/*
+ * Return a string representation of an address. The input depends on the format
+ * specified in the addr_format field of the fi_info struct given to fi_domain.
+ * If the native format for the endpoint is FI_ADDR_STR, then we only need to
+ * copy the data out since it should already be stored in string format. If the
+ * format is FI_SOCKADDR or FI_SOCKADDR_IN, then the string representation needs
+ * to be constructed.
+ *
+ * The format is given by:
+ *
+ *     usnic;node;service;version[;...]
+ *
+ * The version field specifies the version of the FI_ADDR_STR format. This can
+ * potentially change, so store the version within the string to allow for
+ * easily adding things in the future.
+ *
+ * @param fav  Address vector fid_av to use for string conversion
+ * @param addr Address to convert to string. If the addr_format is FI_ADDR_STR,
+ *             then the input is simply given back since it is already a string.
+ *             If the addr_format of the fabric is FI_SOCKADDR, then the
+ *             conversion is performed.
+ * @param buf  The buffer to write the resulting string to.
+ * @param len  A pointer to a size_t that on input is the size of the given
+ *             buffer. On output, the parameter contains the size necessary to
+ *             store the full translated string. Truncation occurred if the
+ *             output value is larger than or equal to the input value.
+ *
+ * @return NULL on error, pointer to buf on success. If the buffer was
+ *         truncated, then the len parameter will contain the length necesssary
+ *         to store the full string.
+ */
+static const char *usdf_av_straddr(struct fid_av *fav, const void *addr,
+				   char *buf, size_t *len)
 {
 	const struct sockaddr_in *sin;
-	char straddr[24];
+	char straddr[INET_ADDRSTRLEN];
+	const struct usdf_av *av;
+	const char *node;
 	int size;
 
-	sin = addr;
-	size = snprintf(straddr, sizeof straddr, "%s:%d",
-			inet_ntoa(sin->sin_addr), ntohs(sin->sin_port));
-	snprintf(buf, *len, "%s", straddr);
+	if (!fav || !addr || !buf || !len) {
+		USDF_WARN_SYS(AV, "invalid parameter given (%p, %p, %p, %p)\n",
+			      fav, addr, buf, len);
+		return NULL;
+	}
+
+	av = av_ftou(fav);
+
+	switch (av->av_domain->dom_info->addr_format) {
+	case FI_SOCKADDR:
+	case FI_SOCKADDR_IN:
+		sin = addr;
+		if (sin->sin_family != AF_INET) {
+			USDF_WARN_SYS(AV, "expected family AF_INET, not %h\n",
+				      sin->sin_family);
+			return NULL;
+		}
+
+		node = inet_ntop(AF_INET, &sin->sin_addr.s_addr, straddr,
+				 sizeof(straddr));
+		if (!node) {
+			USDF_WARN_SYS(AV, "inet_ntop failed: %d: <%s>\n", errno,
+				      strerror(errno));
+			return NULL;
+		}
+
+		size = snprintf(buf, *len, "%s;%s;%d;%d", USDF_PROV_NAME, node,
+				ntohs(sin->sin_port), USDF_ADDR_STR_VERSION);
+		break;
+	case FI_ADDR_STR:
+		size = snprintf(buf, *len, "%s", (char *)addr);
+		break;
+	default:
+		USDF_WARN_SYS(AV, "unsupported addr_format for AV domain\n");
+		return NULL;
+	}
+
+	buf[*len - 1] = '\0';
 	*len = size + 1;
+
 	return buf;
 }
 
